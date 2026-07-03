@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Чебурчат — чат с нейросетью</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            background: #e5e5ea;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .chat-container {
+            background: white;
+            border-radius: 28px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            width: 100%;
+            max-width: 500px;
+            height: 90vh;
+            max-height: 700px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .header {
+            background: #2d2f36;
+            color: white;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-shrink: 0;
+        }
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #f7c948;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            font-weight: bold;
+            color: #2d2f36;
+            flex-shrink: 0;
+            cursor: pointer;
+            transition: transform 0.1s;
+            user-select: none;
+        }
+        .avatar:active {
+            transform: scale(0.92);
+        }
+        .header h1 {
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: 0.3px;
+        }
+        .header .sub {
+            font-size: 13px;
+            opacity: 0.7;
+            margin-left: auto;
+        }
+        .messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            background: #f8f9fc;
+        }
+        .message {
+            max-width: 80%;
+            padding: 10px 14px;
+            border-radius: 20px;
+            word-wrap: break-word;
+            line-height: 1.4;
+            font-size: 15px;
+            animation: fadeIn 0.2s ease;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message.user {
+            align-self: flex-end;
+            background: #007aff;
+            color: white;
+            border-bottom-right-radius: 6px;
+        }
+        .message.bot {
+            align-self: flex-start;
+            background: #e9ecef;
+            color: #1c1c1e;
+            border-bottom-left-radius: 6px;
+        }
+        .message .sender {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 3px;
+            opacity: 0.7;
+        }
+        .message.user .sender {
+            color: rgba(255,255,255,0.85);
+        }
+        .message.bot .sender {
+            color: #3a3a3c;
+        }
+        .message .time {
+            font-size: 10px;
+            opacity: 0.6;
+            margin-top: 4px;
+            text-align: right;
+        }
+        .message.user .time {
+            color: rgba(255,255,255,0.7);
+        }
+        .message.bot .time {
+            color: #6c6c70;
+        }
+        .input-area {
+            padding: 12px 16px;
+            background: white;
+            border-top: 1px solid #d1d1d6;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .input-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .input-row input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid #d1d1d6;
+            border-radius: 25px;
+            font-size: 15px;
+            outline: none;
+            transition: border 0.2s;
+        }
+        .input-row input:focus {
+            border-color: #007aff;
+        }
+        .input-row input:disabled {
+            background: #f0f0f2;
+            opacity: 0.7;
+        }
+        .input-row button {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 25px;
+            background: #007aff;
+            color: white;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+        .input-row button:hover {
+            background: #005bbf;
+        }
+        .input-row button:active {
+            transform: scale(0.96);
+        }
+        .input-row button:disabled {
+            background: #8e8e93;
+            cursor: not-allowed;
+        }
+        .bottom-actions {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            margin-top: 4px;
+        }
+        .clear-btn {
+            background: transparent;
+            border: none;
+            color: #ff3b30;
+            font-size: 13px;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 12px;
+            transition: background 0.2s;
+        }
+        .clear-btn:hover {
+            background: #ffe7e6;
+        }
+        .messages::-webkit-scrollbar {
+            width: 5px;
+        }
+        .messages::-webkit-scrollbar-track {
+            background: #e9ecef;
+            border-radius: 10px;
+        }
+        .messages::-webkit-scrollbar-thumb {
+            background: #b0b3b8;
+            border-radius: 10px;
+        }
+        .welcome {
+            text-align: center;
+            color: #6c6c70;
+            font-size: 13px;
+            padding: 12px 0;
+        }
+        .welcome span {
+            background: #e9ecef;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+        .typing {
+            align-self: flex-start;
+            background: #e9ecef;
+            color: #3a3a3c;
+            padding: 10px 14px;
+            border-radius: 20px;
+            border-bottom-left-radius: 6px;
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        .typing::after {
+            content: '...';
+            animation: dots 1.2s steps(3, end) infinite;
+        }
+        @keyframes dots {
+            0% { content: ''; }
+            33% { content: '.'; }
+            66% { content: '..'; }
+            100% { content: '...'; }
+        }
+        .hidden-hint {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
+            clip: rect(0,0,0,0);
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="header">
+            <div class="avatar" id="avatarToggle" title="Кликни, чтобы переключить отправителя (скрыто)">🐻</div>
+            <h1>Чебурчат</h1>
+            <span class="sub">✦ в сети</span>
+        </div>
+
+        <div class="messages" id="messages">
+            <div class="welcome"><span>✨ Привет! Напиши что-нибудь, и я отвечу</span></div>
+        </div>
+
+        <div class="input-area">
+            <div class="input-row">
+                <input type="text" id="messageInput" placeholder="Введите сообщение..." autofocus />
+                <button id="sendBtn">Отправить</button>
+            </div>
+            <div class="bottom-actions">
+                <button class="clear-btn" id="clearBtn">🗑 Очистить чат</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const messagesContainer = document.getElementById('messages');
+            const messageInput = document.getElementById('messageInput');
+            const sendBtn = document.getElementById('sendBtn');
+            const clearBtn = document.getElementById('clearBtn');
+            const avatar = document.getElementById('avatarToggle');
+
+            let currentSender = 'user'; // 'user' или 'bot' – переключается кликом по аватарке (невидимо)
+            let isWaitingForBot = false;
+
+            // Массив ответов бота (для автоматического режима, но мы оставляем ручное управление)
+            // Однако мы не используем автоматические ответы, так как пользователь сам решает, от кого писать.
+            // Но для стартовых сообщений используем.
+
+            function addMessage(text, sender) {
+                if (!text.trim()) return;
+                const welcome = messagesContainer.querySelector('.welcome');
+                if (welcome) welcome.remove();
+
+                const msgDiv = document.createElement('div');
+                msgDiv.className = `message ${sender}`;
+                const senderLabel = sender === 'user' ? 'Вы' : 'Чебурчат';
+                const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                msgDiv.innerHTML = `
+                    <div class="sender">${senderLabel}</div>
+                    <div class="text">${escapeHtml(text)}</div>
+                    <div class="time">${time}</div>
+                `;
+                messagesContainer.appendChild(msgDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+
+            function escapeHtml(unsafe) {
+                return unsafe
+                    .replace(/&/g, "&amp;")
+                    .replace(/</g, "&lt;")
+                    .replace(/>/g, "&gt;")
+                    .replace(/"/g, "&quot;")
+                    .replace(/'/g, "&#039;");
+            }
+
+            // Отправка сообщения от текущего отправителя
+            function sendMessage() {
+                const text = messageInput.value.trim();
+                if (!text || isWaitingForBot) return;
+
+                addMessage(text, currentSender);
+                messageInput.value = '';
+                messageInput.focus();
+
+                // Если текущий отправитель – пользователь, то можно включить автоматический ответ бота?
+                // Но по заданию мы оставляем функцию писать от 2 лиц, но без автоматики.
+                // Пользователь сам переключает отправителя кликом по аватарке.
+                // Поэтому никаких автоматических ответов не генерируем.
+                // Просто отправляем сообщение от текущего отправителя.
+            }
+
+            // Переключение отправителя (невидимое)
+            function toggleSender() {
+                currentSender = (currentSender === 'user') ? 'bot' : 'user';
+                // Можно добавить вибро или звук, но по условию ничего не показываем.
+                // Для отладки можно вывести в консоль, но не нужно.
+                // console.log('Сейчас отправитель:', currentSender);
+            }
+
+            // Обработчики
+            sendBtn.addEventListener('click', sendMessage);
+            messageInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+
+            // Клик по аватарке переключает отправителя (невидимо)
+            avatar.addEventListener('click', function(e) {
+                e.stopPropagation();
+                toggleSender();
+                // Небольшая тактильная обратная связь без визуальных изменений
+                // Можно мигнуть аватаркой, но это визуально. Оставим только смену.
+            });
+
+            // Очистка чата
+            clearBtn.addEventListener('click', function() {
+                if (isWaitingForBot) return;
+                messagesContainer.innerHTML = `
+                    <div class="welcome"><span>✨ Чат очищен. Напишите что-нибудь</span></div>
+                `;
+                messageInput.disabled = false;
+                sendBtn.disabled = false;
+                isWaitingForBot = false;
+                messageInput.focus();
+            });
+
+            // Стартовые сообщения (чтобы показать диалог)
+            window.addEventListener('load', function() {
+                setTimeout(() => {
+                    addMessage('Привет! Я Чебурчат — твой виртуальный собеседник.', 'bot');
+                }, 300);
+                setTimeout(() => {
+                    addMessage('Здорово! Как настроение?', 'user');
+                }, 900);
+                setTimeout(() => {
+                    addMessage('Отличное! Готов поболтать о чём угодно 😊', 'bot');
+                }, 1600);
+            });
+
+            // Небольшая подсказка в консоли (можно убрать, но оставлю для ясности)
+            console.log('💡 Кликни по аватарке 🐻, чтобы переключить отправителя (Вы / Чебурчат) — функция скрыта.');
+        })();
+    </script>
+</body>
+</html>
