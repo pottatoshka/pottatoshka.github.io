@@ -1,15 +1,11 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Создатель расширений для Turbowarp</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Luau → Turbowarp Extension Builder</title>
     <style>
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: #1e1e2f;
@@ -58,7 +54,6 @@
         }
         .editor-container {
             flex: 1;
-            position: relative;
             display: flex;
             flex-direction: column;
         }
@@ -138,38 +133,35 @@
             flex-wrap: wrap;
         }
         @media (max-width: 800px) {
-            .main {
-                flex-direction: column;
-            }
-            .panel {
-                flex: none;
-                height: 50vh;
-            }
+            .main { flex-direction: column; }
+            .panel { flex: none; height: 50vh; }
         }
     </style>
 </head>
 <body>
     <header>
-        <h1>⚡ Turbowarp Extension Builder</h1>
-        <span class="info">Пиши на простом DSL → получай JS для Turbowarp</span>
+        <h1>⚡ Luau → Turbowarp Extension</h1>
+        <span class="info">Пиши на Luau, получай JS для Turbowarp</span>
     </header>
     <div class="main">
-        <!-- Левая панель: редактор -->
+        <!-- Левая панель: редактор Luau -->
         <div class="panel">
-            <h2>📝 Код на DSL</h2>
+            <h2>📝 Код на Luau</h2>
             <div class="editor-container">
-                <textarea id="dslInput" spellcheck="false" placeholder="Введите код расширения...">extension id "example" name "Пример"
-                
-block "Сложить [a] и [b]"
-  arg number "a"
-  arg number "b"
-  return args.a + args.b
-end
+                <textarea id="luauInput" spellcheck="false" placeholder="Введите код на Luau...">tbw.extension("example", "Пример")
 
-block "Приветствие [name]"
-  arg string "name"
-  do console.log("Привет, " + args.name)
-end</textarea>
+tbw.block("Сложить [a] и [b]", function(args)
+    return args.a + args.b
+end, {
+    a = "number",
+    b = "number"
+})
+
+tbw.block("Приветствие [name]", function(args)
+    print("Привет, " .. args.name)
+end, {
+    name = "string"
+})</textarea>
             </div>
             <div class="toolbar">
                 <button id="convertBtn">🔄 Конвертировать в JS</button>
@@ -179,7 +171,7 @@ end</textarea>
             <div id="status" class="status">Готов к работе</div>
         </div>
 
-        <!-- Правая панель: вывод -->
+        <!-- Правая панель: вывод JS -->
         <div class="panel">
             <h2>📦 Сгенерированный JavaScript</h2>
             <div class="editor-container">
@@ -193,8 +185,7 @@ end</textarea>
 
     <script>
         (function() {
-            // DOM references
-            const dslInput = document.getElementById('dslInput');
+            const luauInput = document.getElementById('luauInput');
             const jsOutput = document.getElementById('jsOutput');
             const statusDiv = document.getElementById('status');
             const convertBtn = document.getElementById('convertBtn');
@@ -202,197 +193,212 @@ end</textarea>
             const copyBtn = document.getElementById('copyBtn');
             const exampleBtn = document.getElementById('exampleBtn');
 
-            // Пример кода для кнопки
-            const exampleCode = `extension id "math" name "Математика"
+            // Пример Luau-кода
+            const exampleLuau = `tbw.extension("math", "Математика")
 
-block "Сложить [a] и [b]"
-  arg number "a"
-  arg number "b"
-  return args.a + args.b
-end
+tbw.block("Сложить [a] и [b]", function(args)
+    return args.a + args.b
+end, {
+    a = "number",
+    b = "number"
+})
 
-block "Случайное число от [min] до [max]"
-  arg number "min"
-  arg number "max"
-  return Math.floor(Math.random() * (args.max - args.min + 1)) + args.min
-end
+tbw.block("Случайное число от [min] до [max]", function(args)
+    return math.random(args.min, args.max)
+end, {
+    min = "number",
+    max = "number"
+})
 
-block "Сказать [text]"
-  arg string "text"
-  do console.log("Сообщение: " + args.text)
-end`;
+tbw.block("Сказать [text]", function(args)
+    print("Сообщение: " .. args.text)
+end, {
+    text = "string"
+})`;
 
-            // Парсер и генератор
-            function convertDSLtoJS(dsl) {
-                // Удаляем лишние пробелы, но сохраняем переводы строк
-                const lines = dsl.split('\n').map(line => line.trim());
-                // Объединение в одну строку для удобства разбора, но сохраняем структуру
-                // Простой парсер: ищем блоки extension и block ... end
-                let result = '';
-                let extensionId = 'myextension';
-                let extensionName = 'My Extension';
-                let blocks = [];
-                let currentBlock = null;
-                let insideBlock = false;
+            // ----- Транслятор Luau → JS -----
+            function translateLuauToJS(luauCode) {
+                // Удаляем комментарии (однострочные --)
+                let code = luauCode.replace(/--[^\n]*/g, '');
 
-                // Функция для парсинга аргументов
-                function parseArg(line) {
-                    // arg type "name"
-                    const match = line.match(/^arg\s+(number|string|boolean|dropdown)\s+"([^"]+)"$/);
-                    if (!match) throw new Error('Неверный формат аргумента: ' + line);
-                    return { type: match[1], name: match[2] };
-                }
+                // Разбиваем на строки для удобства
+                let lines = code.split('\n').map(l => l.trim()).filter(l => l.length > 0);
 
-                // Функция для определения типа блока (репортёр или команда)
-                function determineBlockType(bodyLines) {
-                    for (let l of bodyLines) {
-                        if (l.startsWith('return ')) return 'reporter';
-                        if (l.startsWith('do ')) return 'command';
-                    }
-                    return 'command'; // по умолчанию команда
-                }
+                // Храним данные расширения
+                let extId = 'myextension';
+                let extName = 'My Extension';
+                let blocks = []; // каждый элемент: { text, funcBody, argsDesc, opcode }
 
-                // Функция для получения тела (без return/do)
-                function extractBody(lines) {
-                    let body = [];
-                    for (let l of lines) {
-                        if (l.startsWith('return ')) {
-                            // убираем 'return '
-                            body.push(l.substring(7));
-                        } else if (l.startsWith('do ')) {
-                            body.push(l.substring(3));
-                        } else {
-                            body.push(l);
-                        }
-                    }
-                    return body.join('\n');
-                }
-
-                // Проход по строкам
-                for (let i = 0; i < lines.length; i++) {
+                // Состояние парсера
+                let i = 0;
+                while (i < lines.length) {
                     const line = lines[i];
-                    if (!line || line.startsWith('//')) continue; // пропускаем пустые и комментарии
 
-                    if (line.startsWith('extension id ')) {
-                        const match = line.match(/^extension id\s+"([^"]+)"\s+name\s+"([^"]+)"$/);
-                        if (match) {
-                            extensionId = match[1];
-                            extensionName = match[2];
-                        } else {
-                            // попробуем отдельно
-                            const idMatch = line.match(/extension id\s+"([^"]+)"/);
-                            if (idMatch) extensionId = idMatch[1];
-                            // name может быть на следующей строке? упростим: ожидаем в одной строке
-                            // для простоты считаем, что всё в одной строке
+                    // Обработка tbw.extension("id", "name")
+                    const extMatch = line.match(/^tbw\.extension\s*\(\s*"([^"]+)"\s*,\s*"([^"]+)"\s*\)$/);
+                    if (extMatch) {
+                        extId = extMatch[1];
+                        extName = extMatch[2];
+                        i++;
+                        continue;
+                    }
+
+                    // Обработка tbw.block("text", function(args) ... end, { ... })
+                    const blockMatch = line.match(/^tbw\.block\s*\(\s*"([^"]+)"\s*,\s*function\s*\(\s*args\s*\)/);
+                    if (blockMatch) {
+                        const text = blockMatch[1];
+                        // Ищем тело функции до "end" и таблицу аргументов после ","
+                        // Начинаем собирать строки тела
+                        let bodyLines = [];
+                        let j = i + 1;
+                        let depth = 0;
+                        let foundEnd = false;
+                        let argsTable = '';
+
+                        // Ищем соответствующий "end" для функции
+                        while (j < lines.length) {
+                            const l = lines[j];
+                            if (l === 'end' && depth === 0) {
+                                // Это конец функции
+                                foundEnd = true;
+                                j++;
+                                break;
+                            } else if (l.startsWith('function')) {
+                                depth++;
+                                bodyLines.push(l);
+                            } else if (l === 'end') {
+                                if (depth > 0) depth--;
+                                if (depth === 0) {
+                                    // Это конец вложенной функции? но мы уже нашли end для внешней?
+                                    // но мы идём до первого end с depth=0, что соответствует внешней функции
+                                    // Так что здесь мы не должны выходить, если depth=0, но мы уже вышли выше
+                                    // Поэтому логика: если depth===0 и l==='end' - это конец функции
+                                    // Но мы уже обработали выше, поэтому здесь просто пропускаем
+                                }
+                                bodyLines.push(l);
+                            } else {
+                                bodyLines.push(l);
+                            }
+                            j++;
                         }
-                        continue;
-                    }
 
-                    if (line.startsWith('block ')) {
-                        // начало блока: block "text"
-                        const match = line.match(/^block\s+"([^"]+)"$/);
-                        if (!match) throw new Error('Неверный формат блока: ' + line);
-                        const text = match[1];
-                        currentBlock = {
-                            text: text,
-                            args: [],
-                            bodyLines: [],
-                            opcode: 'block' + (blocks.length + 1) // генерируем уникальный opcode
-                        };
-                        insideBlock = true;
-                        continue;
-                    }
+                        if (!foundEnd) {
+                            throw new Error('Не найден "end" для блока: ' + text);
+                        }
 
-                    if (insideBlock && line === 'end') {
-                        // завершаем блок
-                        if (currentBlock) {
-                            // Определяем тип блока
-                            const type = determineBlockType(currentBlock.bodyLines);
-                            // Генерируем описание блока для getInfo
-                            const blockInfo = {
-                                opcode: currentBlock.opcode,
-                                blockType: type === 'reporter' ? 'Scratch.BlockType.REPORTER' : 'Scratch.BlockType.COMMAND',
-                                text: currentBlock.text,
-                                arguments: {}
-                            };
-                            // Заполняем аргументы
-                            let argIndex = 0;
-                            for (let arg of currentBlock.args) {
-                                const argName = arg.name;
-                                // Ищем в тексте места для вставки: [argName]
-                                // Но мы просто добавим все аргументы в arguments
-                                let argType = 'Scratch.ArgumentType.' + arg.type.toUpperCase();
-                                if (arg.type === 'dropdown') argType = 'Scratch.ArgumentType.STRING'; // упрощённо
-                                blockInfo.arguments[argName] = {
-                                    type: argType,
-                                    defaultValue: arg.type === 'number' ? 0 : (arg.type === 'string' ? '' : '')
-                                };
-                                // Для dropdown нужен массив menu, но упростим
-                                if (arg.type === 'dropdown') {
-                                    blockInfo.arguments[argName].menu = 'menu_' + argName;
+                        // Теперь после "end" должна быть таблица аргументов: { a = "number", b = "number" }
+                        // Пропускаем возможные запятые и пробелы
+                        while (j < lines.length && !lines[j].startsWith('{')) {
+                            j++;
+                        }
+                        if (j >= lines.length) {
+                            throw new Error('Ожидается таблица аргументов после "end" для блока: ' + text);
+                        }
+                        // Собираем таблицу до закрывающей }
+                        let tableLines = [];
+                        let braceDepth = 0;
+                        let started = false;
+                        while (j < lines.length) {
+                            const l = lines[j];
+                            for (let ch of l) {
+                                if (ch === '{') { braceDepth++; started = true; }
+                                if (ch === '}') { braceDepth--; }
+                            }
+                            tableLines.push(l);
+                            j++;
+                            if (started && braceDepth === 0) break;
+                        }
+                        argsTable = tableLines.join(' ');
+
+                        // Извлекаем описание аргументов из argsTable
+                        // Формат: { a = "number", b = "number" }
+                        // Упрощённый парсинг: ищем пары ключ = "тип"
+                        let argsDesc = {};
+                        const pairs = argsTable.match(/(\w+)\s*=\s*"([^"]+)"/g);
+                        if (pairs) {
+                            for (let p of pairs) {
+                                const m = p.match(/(\w+)\s*=\s*"([^"]+)"/);
+                                if (m) {
+                                    argsDesc[m[1]] = m[2];
                                 }
                             }
-                            // Тело функции
-                            const bodyCode = extractBody(currentBlock.bodyLines);
-                            // Сохраняем блок
-                            blocks.push({
-                                info: blockInfo,
-                                args: currentBlock.args,
-                                body: bodyCode,
-                                type: type
-                            });
-                            currentBlock = null;
-                            insideBlock = false;
                         }
+
+                        // Тело функции (без внешнего function(args) и end)
+                        let body = bodyLines.join('\n');
+                        // Убираем строки, которые могут быть 'function(args)' или 'end' (но мы уже их исключили)
+                        // Но оставляем только тело
+                        // Также преобразуем Luau-синтаксис в JS:
+                        // - замена function ... end на function ... { ... } уже сделана на этапе генерации
+                        // - замена local на var
+                        // - замена and, or, not
+                        // - замена .. на +
+                        // - замена args.имя на args['имя']
+                        // - print -> console.log
+                        // - math. -> Math.
+                        let jsBody = body
+                            .replace(/\bprint\s*\(/g, 'console.log(')
+                            .replace(/\bmath\./g, 'Math.')
+                            .replace(/\band\b/g, '&&')
+                            .replace(/\bor\b/g, '||')
+                            .replace(/\bnot\b/g, '!')
+                            .replace(/\.\./g, '+')
+                            .replace(/args\.(\w+)/g, "args['$1']")
+                            .replace(/\blocal\b/g, 'var');
+
+                        // Если тело содержит return, то блок репортёр, иначе команда.
+                        const hasReturn = /return\s+/.test(jsBody);
+
+                        // Генерируем opcode
+                        const opcode = 'block' + (blocks.length + 1);
+
+                        blocks.push({
+                            text: text,
+                            argsDesc: argsDesc,
+                            body: jsBody,
+                            opcode: opcode,
+                            hasReturn: hasReturn
+                        });
+
+                        i = j; // продолжить с позиции после таблицы
                         continue;
                     }
 
-                    if (insideBlock && currentBlock) {
-                        // Обрабатываем строки внутри блока
-                        if (line.startsWith('arg ')) {
-                            const arg = parseArg(line);
-                            currentBlock.args.push(arg);
-                        } else {
-                            // Это тело (может быть return или do или обычный код)
-                            currentBlock.bodyLines.push(line);
-                        }
-                    }
+                    // Если строка не распознана, пропускаем (возможно, комментарий или пустая)
+                    i++;
                 }
 
-                // Если остался незакрытый блок - ошибка
-                if (insideBlock) {
-                    throw new Error('Незакрытый блок (ожидается "end")');
-                }
-
-                // Теперь генерируем JavaScript-код расширения
+                // ----- Генерация JavaScript -----
                 let jsCode = `(function(Scratch) {\n  'use strict';\n\n`;
-                jsCode += `  class ${extensionId.charAt(0).toUpperCase() + extensionId.slice(1)}Extension {\n`;
+                const className = extId.charAt(0).toUpperCase() + extId.slice(1) + 'Extension';
+                jsCode += `  class ${className} {\n`;
                 jsCode += `    getInfo() {\n`;
                 jsCode += `      return {\n`;
-                jsCode += `        id: '${extensionId}',\n`;
-                jsCode += `        name: '${extensionName}',\n`;
+                jsCode += `        id: '${extId}',\n`;
+                jsCode += `        name: '${extName}',\n`;
                 jsCode += `        blocks: [\n`;
 
-                // Генерируем блоки
-                for (let i = 0; i < blocks.length; i++) {
-                    const b = blocks[i];
-                    const info = b.info;
+                // Блоки
+                for (let b of blocks) {
+                    const blockType = b.hasReturn ? 'Scratch.BlockType.REPORTER' : 'Scratch.BlockType.COMMAND';
                     jsCode += `          {\n`;
-                    jsCode += `            opcode: '${info.opcode}',\n`;
-                    jsCode += `            blockType: ${info.blockType},\n`;
-                    jsCode += `            text: '${info.text}',\n`;
+                    jsCode += `            opcode: '${b.opcode}',\n`;
+                    jsCode += `            blockType: ${blockType},\n`;
+                    jsCode += `            text: '${b.text}',\n`;
                     jsCode += `            arguments: {\n`;
-                    const argNames = Object.keys(info.arguments);
-                    for (let j = 0; j < argNames.length; j++) {
-                        const name = argNames[j];
-                        const argDef = info.arguments[name];
-                        jsCode += `              ${name}: { type: ${argDef.type}, defaultValue: ${JSON.stringify(argDef.defaultValue)} }`;
-                        if (j < argNames.length - 1) jsCode += ',';
+                    const argNames = Object.keys(b.argsDesc);
+                    for (let k = 0; k < argNames.length; k++) {
+                        const name = argNames[k];
+                        const type = b.argsDesc[name];
+                        let argType = 'Scratch.ArgumentType.' + type.toUpperCase();
+                        if (type === 'dropdown') argType = 'Scratch.ArgumentType.STRING';
+                        jsCode += `              ${name}: { type: ${argType}, defaultValue: ${type === 'number' ? '0' : type === 'string' ? '""' : 'false'} }`;
+                        if (k < argNames.length - 1) jsCode += ',';
                         jsCode += '\n';
                     }
                     jsCode += `            }\n`;
                     jsCode += `          }`;
-                    if (i < blocks.length - 1) jsCode += ',';
+                    if (blocks.indexOf(b) < blocks.length - 1) jsCode += ',';
                     jsCode += '\n';
                 }
 
@@ -400,47 +406,38 @@ end`;
                 jsCode += `      };\n`;
                 jsCode += `    }\n\n`;
 
-                // Генерируем методы для блоков
+                // Методы для блоков
                 for (let b of blocks) {
-                    const opcode = b.info.opcode;
-                    const argsList = b.args.map(a => a.name);
-                    // Тело функции - используем строку тела, подставляя args.имя
-                    // Заменяем args.имя на args['имя'] для безопасности
-                    let bodyStr = b.body;
-                    // Заменяем args.имя на args['имя'] (простейший способ)
-                    // Ищем args.xxx
-                    bodyStr = bodyStr.replace(/args\.([a-zA-Z_]\w*)/g, "args['$1']");
-                    // Если это репортёр, нужно return, если нет - просто выполняем код
-                    let methodBody = '';
-                    if (b.type === 'reporter') {
-                        // Если тело уже содержит return (мы его убрали), то просто вставляем
-                        // У нас тело уже без return, так что добавляем return
-                        methodBody = `    ${opcode}(args) {\n      return (function() { ${bodyStr} })();\n    }`;
+                    const opcode = b.opcode;
+                    let methodBody = b.body;
+                    // Если это репортёр, мы должны вернуть результат
+                    if (b.hasReturn) {
+                        // Тело уже содержит return, оставляем как есть
+                        methodBody = `    ${opcode}(args) {\n      ${methodBody}\n    }`;
                     } else {
-                        // команда - выполняем код
-                        methodBody = `    ${opcode}(args) {\n      ${bodyStr}\n    }`;
+                        methodBody = `    ${opcode}(args) {\n      ${methodBody}\n    }`;
                     }
                     jsCode += methodBody + '\n\n';
                 }
 
                 jsCode += `  }\n\n`;
-                jsCode += `  Scratch.extensions.register(new ${extensionId.charAt(0).toUpperCase() + extensionId.slice(1)}Extension());\n`;
+                jsCode += `  Scratch.extensions.register(new ${className}());\n`;
                 jsCode += `})(Scratch);\n`;
 
                 return jsCode;
             }
 
-            // Обновление статуса
+            // Вспомогательная функция обновления статуса
             function setStatus(msg, isError = false) {
                 statusDiv.textContent = msg;
                 statusDiv.className = 'status' + (isError ? ' error' : '');
             }
 
-            // Основная функция конвертации
+            // Конвертация
             function convert() {
-                const dsl = dslInput.value;
+                const luau = luauInput.value;
                 try {
-                    const js = convertDSLtoJS(dsl);
+                    const js = translateLuauToJS(luau);
                     jsOutput.textContent = js;
                     setStatus('✅ Конвертация успешна!');
                     return js;
@@ -454,7 +451,6 @@ end`;
             // События
             convertBtn.addEventListener('click', convert);
 
-            // Скачивание
             downloadBtn.addEventListener('click', function() {
                 const js = jsOutput.textContent;
                 if (!js || js.startsWith('// Ошибка')) {
@@ -473,7 +469,6 @@ end`;
                 setStatus('⬇ Файл extension.js скачан');
             });
 
-            // Копирование
             copyBtn.addEventListener('click', function() {
                 const js = jsOutput.textContent;
                 if (!js || js.startsWith('// Ошибка')) {
@@ -483,7 +478,6 @@ end`;
                 navigator.clipboard.writeText(js).then(() => {
                     setStatus('📄 Код скопирован в буфер');
                 }).catch(() => {
-                    // fallback
                     const range = document.createRange();
                     range.selectNode(jsOutput);
                     window.getSelection().removeAllRanges();
@@ -493,26 +487,19 @@ end`;
                 });
             });
 
-            // Загрузить пример
             exampleBtn.addEventListener('click', function() {
-                dslInput.value = exampleCode;
-                convert(); // автоматически конвертировать
-            });
-
-            // Автоконвертация при загрузке
-            window.addEventListener('DOMContentLoaded', function() {
+                luauInput.value = exampleLuau;
                 convert();
             });
 
-            // Также можно добавить автообновление по Ctrl+Enter
-            dslInput.addEventListener('keydown', function(e) {
+            window.addEventListener('DOMContentLoaded', convert);
+
+            luauInput.addEventListener('keydown', function(e) {
                 if (e.ctrlKey && e.key === 'Enter') {
                     e.preventDefault();
                     convert();
                 }
             });
-
-            // Запасной вариант: если не сработал clipboard
         })();
     </script>
 </body>
