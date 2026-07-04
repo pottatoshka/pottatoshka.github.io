@@ -1,388 +1,518 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Чебурчат — чат с нейросетью</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Создатель расширений для Turbowarp</title>
     <style>
         * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
         }
         body {
-            background: #e5e5ea;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1e1e2f;
+            color: #eee;
+            height: 100vh;
             display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
+            flex-direction: column;
             padding: 20px;
         }
-        .chat-container {
-            background: white;
-            border-radius: 28px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-            width: 100%;
-            max-width: 500px;
-            height: 90vh;
-            max-height: 700px;
+        header {
             display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        .header {
-            background: #2d2f36;
-            color: white;
-            padding: 16px 20px;
-            display: flex;
+            justify-content: space-between;
             align-items: center;
-            gap: 12px;
-            flex-shrink: 0;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
         }
-        .avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: #f7c948;
+        header h1 {
+            font-weight: 300;
+            color: #ffb347;
+        }
+        header .info {
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+        .main {
             display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            font-weight: bold;
-            color: #2d2f36;
-            flex-shrink: 0;
-            cursor: pointer;
-            transition: transform 0.1s;
-            user-select: none;
-        }
-        .avatar:active {
-            transform: scale(0.92);
-        }
-        .header h1 {
-            font-size: 20px;
-            font-weight: 600;
-            letter-spacing: 0.3px;
-        }
-        .header .sub {
-            font-size: 13px;
-            opacity: 0.7;
-            margin-left: auto;
-        }
-        .messages {
             flex: 1;
-            overflow-y: auto;
-            padding: 16px 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            background: #f8f9fc;
+            gap: 20px;
+            min-height: 0;
         }
-        .message {
-            max-width: 80%;
-            padding: 10px 14px;
-            border-radius: 20px;
-            word-wrap: break-word;
-            line-height: 1.4;
-            font-size: 15px;
-            animation: fadeIn 0.2s ease;
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(6px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .message.user {
-            align-self: flex-end;
-            background: #007aff;
-            color: white;
-            border-bottom-right-radius: 6px;
-        }
-        .message.bot {
-            align-self: flex-start;
-            background: #e9ecef;
-            color: #1c1c1e;
-            border-bottom-left-radius: 6px;
-        }
-        .message .sender {
-            font-size: 12px;
-            font-weight: 600;
-            margin-bottom: 3px;
-            opacity: 0.7;
-        }
-        .message.user .sender {
-            color: rgba(255,255,255,0.85);
-        }
-        .message.bot .sender {
-            color: #3a3a3c;
-        }
-        .message .time {
-            font-size: 10px;
-            opacity: 0.6;
-            margin-top: 4px;
-            text-align: right;
-        }
-        .message.user .time {
-            color: rgba(255,255,255,0.7);
-        }
-        .message.bot .time {
-            color: #6c6c70;
-        }
-        .input-area {
-            padding: 12px 16px;
-            background: white;
-            border-top: 1px solid #d1d1d6;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            flex-shrink: 0;
-        }
-        .input-row {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        .input-row input {
+        .panel {
             flex: 1;
-            padding: 10px 14px;
-            border: 1px solid #d1d1d6;
-            border-radius: 25px;
-            font-size: 15px;
-            outline: none;
-            transition: border 0.2s;
-        }
-        .input-row input:focus {
-            border-color: #007aff;
-        }
-        .input-row input:disabled {
-            background: #f0f0f2;
-            opacity: 0.7;
-        }
-        .input-row button {
-            padding: 10px 18px;
-            border: none;
-            border-radius: 25px;
-            background: #007aff;
-            color: white;
-            font-size: 15px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background 0.2s;
-            white-space: nowrap;
-        }
-        .input-row button:hover {
-            background: #005bbf;
-        }
-        .input-row button:active {
-            transform: scale(0.96);
-        }
-        .input-row button:disabled {
-            background: #8e8e93;
-            cursor: not-allowed;
-        }
-        .bottom-actions {
             display: flex;
-            justify-content: flex-end;
-            align-items: center;
-            margin-top: 4px;
-        }
-        .clear-btn {
-            background: transparent;
-            border: none;
-            color: #ff3b30;
-            font-size: 13px;
-            cursor: pointer;
-            padding: 4px 8px;
+            flex-direction: column;
+            background: #2d2d44;
             border-radius: 12px;
-            transition: background 0.2s;
-        }
-        .clear-btn:hover {
-            background: #ffe7e6;
-        }
-        .messages::-webkit-scrollbar {
-            width: 5px;
-        }
-        .messages::-webkit-scrollbar-track {
-            background: #e9ecef;
-            border-radius: 10px;
-        }
-        .messages::-webkit-scrollbar-thumb {
-            background: #b0b3b8;
-            border-radius: 10px;
-        }
-        .welcome {
-            text-align: center;
-            color: #6c6c70;
-            font-size: 13px;
-            padding: 12px 0;
-        }
-        .welcome span {
-            background: #e9ecef;
-            padding: 4px 12px;
-            border-radius: 20px;
-        }
-        .typing {
-            align-self: flex-start;
-            background: #e9ecef;
-            color: #3a3a3c;
-            padding: 10px 14px;
-            border-radius: 20px;
-            border-bottom-left-radius: 6px;
-            font-size: 14px;
-            opacity: 0.8;
-        }
-        .typing::after {
-            content: '...';
-            animation: dots 1.2s steps(3, end) infinite;
-        }
-        @keyframes dots {
-            0% { content: ''; }
-            33% { content: '.'; }
-            66% { content: '..'; }
-            100% { content: '...'; }
-        }
-        .hidden-hint {
-            position: absolute;
-            width: 1px;
-            height: 1px;
+            padding: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
             overflow: hidden;
-            clip: rect(0,0,0,0);
+        }
+        .panel h2 {
+            font-weight: 300;
+            font-size: 1.2rem;
+            margin-bottom: 10px;
+            color: #ffb347;
+        }
+        .editor-container {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        textarea, .code-output {
+            flex: 1;
+            width: 100%;
+            background: #1a1a2e;
+            color: #e0e0e0;
+            border: none;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+            tab-size: 2;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .code-output {
+            background: #12121f;
+            overflow: auto;
+            color: #b0d0f0;
+        }
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        button {
+            background: #ffb347;
+            color: #1e1e2f;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 0.9rem;
+        }
+        button:hover {
+            background: #ffa020;
+            transform: scale(1.02);
+        }
+        button.secondary {
+            background: #4a4a6a;
+            color: #eee;
+        }
+        button.secondary:hover {
+            background: #5a5a7a;
+        }
+        .example-btn {
+            background: #2d5f7a;
+            color: #eee;
+        }
+        .example-btn:hover {
+            background: #3a7a9a;
+        }
+        .status {
+            margin-top: 10px;
+            padding: 8px 12px;
+            border-radius: 6px;
+            background: #1a1a2e;
+            font-size: 0.9rem;
+            color: #8f8;
+        }
+        .status.error {
+            color: #f77;
+            background: #3a1a1a;
+        }
+        .flex-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        @media (max-width: 800px) {
+            .main {
+                flex-direction: column;
+            }
+            .panel {
+                flex: none;
+                height: 50vh;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="chat-container">
-        <div class="header">
-            <div class="avatar" id="avatarToggle" title="Кликни, чтобы переключить отправителя (скрыто)">🐻</div>
-            <h1>Чебурчат</h1>
-            <span class="sub">✦ в сети</span>
-        </div>
+    <header>
+        <h1>⚡ Turbowarp Extension Builder</h1>
+        <span class="info">Пиши на простом DSL → получай JS для Turbowarp</span>
+    </header>
+    <div class="main">
+        <!-- Левая панель: редактор -->
+        <div class="panel">
+            <h2>📝 Код на DSL</h2>
+            <div class="editor-container">
+                <textarea id="dslInput" spellcheck="false" placeholder="Введите код расширения...">extension id "example" name "Пример"
+                
+block "Сложить [a] и [b]"
+  arg number "a"
+  arg number "b"
+  return args.a + args.b
+end
 
-        <div class="messages" id="messages">
-            <div class="welcome"><span>✨ Привет! Напиши что-нибудь, и я отвечу</span></div>
-        </div>
-
-        <div class="input-area">
-            <div class="input-row">
-                <input type="text" id="messageInput" placeholder="Введите сообщение..." autofocus />
-                <button id="sendBtn">Отправить</button>
+block "Приветствие [name]"
+  arg string "name"
+  do console.log("Привет, " + args.name)
+end</textarea>
             </div>
-            <div class="bottom-actions">
-                <button class="clear-btn" id="clearBtn">🗑 Очистить чат</button>
+            <div class="toolbar">
+                <button id="convertBtn">🔄 Конвертировать в JS</button>
+                <button id="downloadBtn" class="secondary">⬇ Скачать .js</button>
+                <button id="exampleBtn" class="example-btn">📋 Загрузить пример</button>
+            </div>
+            <div id="status" class="status">Готов к работе</div>
+        </div>
+
+        <!-- Правая панель: вывод -->
+        <div class="panel">
+            <h2>📦 Сгенерированный JavaScript</h2>
+            <div class="editor-container">
+                <pre id="jsOutput" class="code-output">// Здесь появится код расширения</pre>
+            </div>
+            <div class="toolbar">
+                <button id="copyBtn" class="secondary">📄 Копировать</button>
             </div>
         </div>
     </div>
 
     <script>
         (function() {
-            const messagesContainer = document.getElementById('messages');
-            const messageInput = document.getElementById('messageInput');
-            const sendBtn = document.getElementById('sendBtn');
-            const clearBtn = document.getElementById('clearBtn');
-            const avatar = document.getElementById('avatarToggle');
+            // DOM references
+            const dslInput = document.getElementById('dslInput');
+            const jsOutput = document.getElementById('jsOutput');
+            const statusDiv = document.getElementById('status');
+            const convertBtn = document.getElementById('convertBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const copyBtn = document.getElementById('copyBtn');
+            const exampleBtn = document.getElementById('exampleBtn');
 
-            let currentSender = 'user'; // 'user' или 'bot' – переключается кликом по аватарке (невидимо)
-            let isWaitingForBot = false;
+            // Пример кода для кнопки
+            const exampleCode = `extension id "math" name "Математика"
 
-            // Массив ответов бота (для автоматического режима, но мы оставляем ручное управление)
-            // Однако мы не используем автоматические ответы, так как пользователь сам решает, от кого писать.
-            // Но для стартовых сообщений используем.
+block "Сложить [a] и [b]"
+  arg number "a"
+  arg number "b"
+  return args.a + args.b
+end
 
-            function addMessage(text, sender) {
-                if (!text.trim()) return;
-                const welcome = messagesContainer.querySelector('.welcome');
-                if (welcome) welcome.remove();
+block "Случайное число от [min] до [max]"
+  arg number "min"
+  arg number "max"
+  return Math.floor(Math.random() * (args.max - args.min + 1)) + args.min
+end
 
-                const msgDiv = document.createElement('div');
-                msgDiv.className = `message ${sender}`;
-                const senderLabel = sender === 'user' ? 'Вы' : 'Чебурчат';
-                const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+block "Сказать [text]"
+  arg string "text"
+  do console.log("Сообщение: " + args.text)
+end`;
 
-                msgDiv.innerHTML = `
-                    <div class="sender">${senderLabel}</div>
-                    <div class="text">${escapeHtml(text)}</div>
-                    <div class="time">${time}</div>
-                `;
-                messagesContainer.appendChild(msgDiv);
-                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            // Парсер и генератор
+            function convertDSLtoJS(dsl) {
+                // Удаляем лишние пробелы, но сохраняем переводы строк
+                const lines = dsl.split('\n').map(line => line.trim());
+                // Объединение в одну строку для удобства разбора, но сохраняем структуру
+                // Простой парсер: ищем блоки extension и block ... end
+                let result = '';
+                let extensionId = 'myextension';
+                let extensionName = 'My Extension';
+                let blocks = [];
+                let currentBlock = null;
+                let insideBlock = false;
+
+                // Функция для парсинга аргументов
+                function parseArg(line) {
+                    // arg type "name"
+                    const match = line.match(/^arg\s+(number|string|boolean|dropdown)\s+"([^"]+)"$/);
+                    if (!match) throw new Error('Неверный формат аргумента: ' + line);
+                    return { type: match[1], name: match[2] };
+                }
+
+                // Функция для определения типа блока (репортёр или команда)
+                function determineBlockType(bodyLines) {
+                    for (let l of bodyLines) {
+                        if (l.startsWith('return ')) return 'reporter';
+                        if (l.startsWith('do ')) return 'command';
+                    }
+                    return 'command'; // по умолчанию команда
+                }
+
+                // Функция для получения тела (без return/do)
+                function extractBody(lines) {
+                    let body = [];
+                    for (let l of lines) {
+                        if (l.startsWith('return ')) {
+                            // убираем 'return '
+                            body.push(l.substring(7));
+                        } else if (l.startsWith('do ')) {
+                            body.push(l.substring(3));
+                        } else {
+                            body.push(l);
+                        }
+                    }
+                    return body.join('\n');
+                }
+
+                // Проход по строкам
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i];
+                    if (!line || line.startsWith('//')) continue; // пропускаем пустые и комментарии
+
+                    if (line.startsWith('extension id ')) {
+                        const match = line.match(/^extension id\s+"([^"]+)"\s+name\s+"([^"]+)"$/);
+                        if (match) {
+                            extensionId = match[1];
+                            extensionName = match[2];
+                        } else {
+                            // попробуем отдельно
+                            const idMatch = line.match(/extension id\s+"([^"]+)"/);
+                            if (idMatch) extensionId = idMatch[1];
+                            // name может быть на следующей строке? упростим: ожидаем в одной строке
+                            // для простоты считаем, что всё в одной строке
+                        }
+                        continue;
+                    }
+
+                    if (line.startsWith('block ')) {
+                        // начало блока: block "text"
+                        const match = line.match(/^block\s+"([^"]+)"$/);
+                        if (!match) throw new Error('Неверный формат блока: ' + line);
+                        const text = match[1];
+                        currentBlock = {
+                            text: text,
+                            args: [],
+                            bodyLines: [],
+                            opcode: 'block' + (blocks.length + 1) // генерируем уникальный opcode
+                        };
+                        insideBlock = true;
+                        continue;
+                    }
+
+                    if (insideBlock && line === 'end') {
+                        // завершаем блок
+                        if (currentBlock) {
+                            // Определяем тип блока
+                            const type = determineBlockType(currentBlock.bodyLines);
+                            // Генерируем описание блока для getInfo
+                            const blockInfo = {
+                                opcode: currentBlock.opcode,
+                                blockType: type === 'reporter' ? 'Scratch.BlockType.REPORTER' : 'Scratch.BlockType.COMMAND',
+                                text: currentBlock.text,
+                                arguments: {}
+                            };
+                            // Заполняем аргументы
+                            let argIndex = 0;
+                            for (let arg of currentBlock.args) {
+                                const argName = arg.name;
+                                // Ищем в тексте места для вставки: [argName]
+                                // Но мы просто добавим все аргументы в arguments
+                                let argType = 'Scratch.ArgumentType.' + arg.type.toUpperCase();
+                                if (arg.type === 'dropdown') argType = 'Scratch.ArgumentType.STRING'; // упрощённо
+                                blockInfo.arguments[argName] = {
+                                    type: argType,
+                                    defaultValue: arg.type === 'number' ? 0 : (arg.type === 'string' ? '' : '')
+                                };
+                                // Для dropdown нужен массив menu, но упростим
+                                if (arg.type === 'dropdown') {
+                                    blockInfo.arguments[argName].menu = 'menu_' + argName;
+                                }
+                            }
+                            // Тело функции
+                            const bodyCode = extractBody(currentBlock.bodyLines);
+                            // Сохраняем блок
+                            blocks.push({
+                                info: blockInfo,
+                                args: currentBlock.args,
+                                body: bodyCode,
+                                type: type
+                            });
+                            currentBlock = null;
+                            insideBlock = false;
+                        }
+                        continue;
+                    }
+
+                    if (insideBlock && currentBlock) {
+                        // Обрабатываем строки внутри блока
+                        if (line.startsWith('arg ')) {
+                            const arg = parseArg(line);
+                            currentBlock.args.push(arg);
+                        } else {
+                            // Это тело (может быть return или do или обычный код)
+                            currentBlock.bodyLines.push(line);
+                        }
+                    }
+                }
+
+                // Если остался незакрытый блок - ошибка
+                if (insideBlock) {
+                    throw new Error('Незакрытый блок (ожидается "end")');
+                }
+
+                // Теперь генерируем JavaScript-код расширения
+                let jsCode = `(function(Scratch) {\n  'use strict';\n\n`;
+                jsCode += `  class ${extensionId.charAt(0).toUpperCase() + extensionId.slice(1)}Extension {\n`;
+                jsCode += `    getInfo() {\n`;
+                jsCode += `      return {\n`;
+                jsCode += `        id: '${extensionId}',\n`;
+                jsCode += `        name: '${extensionName}',\n`;
+                jsCode += `        blocks: [\n`;
+
+                // Генерируем блоки
+                for (let i = 0; i < blocks.length; i++) {
+                    const b = blocks[i];
+                    const info = b.info;
+                    jsCode += `          {\n`;
+                    jsCode += `            opcode: '${info.opcode}',\n`;
+                    jsCode += `            blockType: ${info.blockType},\n`;
+                    jsCode += `            text: '${info.text}',\n`;
+                    jsCode += `            arguments: {\n`;
+                    const argNames = Object.keys(info.arguments);
+                    for (let j = 0; j < argNames.length; j++) {
+                        const name = argNames[j];
+                        const argDef = info.arguments[name];
+                        jsCode += `              ${name}: { type: ${argDef.type}, defaultValue: ${JSON.stringify(argDef.defaultValue)} }`;
+                        if (j < argNames.length - 1) jsCode += ',';
+                        jsCode += '\n';
+                    }
+                    jsCode += `            }\n`;
+                    jsCode += `          }`;
+                    if (i < blocks.length - 1) jsCode += ',';
+                    jsCode += '\n';
+                }
+
+                jsCode += `        ]\n`;
+                jsCode += `      };\n`;
+                jsCode += `    }\n\n`;
+
+                // Генерируем методы для блоков
+                for (let b of blocks) {
+                    const opcode = b.info.opcode;
+                    const argsList = b.args.map(a => a.name);
+                    // Тело функции - используем строку тела, подставляя args.имя
+                    // Заменяем args.имя на args['имя'] для безопасности
+                    let bodyStr = b.body;
+                    // Заменяем args.имя на args['имя'] (простейший способ)
+                    // Ищем args.xxx
+                    bodyStr = bodyStr.replace(/args\.([a-zA-Z_]\w*)/g, "args['$1']");
+                    // Если это репортёр, нужно return, если нет - просто выполняем код
+                    let methodBody = '';
+                    if (b.type === 'reporter') {
+                        // Если тело уже содержит return (мы его убрали), то просто вставляем
+                        // У нас тело уже без return, так что добавляем return
+                        methodBody = `    ${opcode}(args) {\n      return (function() { ${bodyStr} })();\n    }`;
+                    } else {
+                        // команда - выполняем код
+                        methodBody = `    ${opcode}(args) {\n      ${bodyStr}\n    }`;
+                    }
+                    jsCode += methodBody + '\n\n';
+                }
+
+                jsCode += `  }\n\n`;
+                jsCode += `  Scratch.extensions.register(new ${extensionId.charAt(0).toUpperCase() + extensionId.slice(1)}Extension());\n`;
+                jsCode += `})(Scratch);\n`;
+
+                return jsCode;
             }
 
-            function escapeHtml(unsafe) {
-                return unsafe
-                    .replace(/&/g, "&amp;")
-                    .replace(/</g, "&lt;")
-                    .replace(/>/g, "&gt;")
-                    .replace(/"/g, "&quot;")
-                    .replace(/'/g, "&#039;");
+            // Обновление статуса
+            function setStatus(msg, isError = false) {
+                statusDiv.textContent = msg;
+                statusDiv.className = 'status' + (isError ? ' error' : '');
             }
 
-            // Отправка сообщения от текущего отправителя
-            function sendMessage() {
-                const text = messageInput.value.trim();
-                if (!text || isWaitingForBot) return;
-
-                addMessage(text, currentSender);
-                messageInput.value = '';
-                messageInput.focus();
-
-                // Если текущий отправитель – пользователь, то можно включить автоматический ответ бота?
-                // Но по заданию мы оставляем функцию писать от 2 лиц, но без автоматики.
-                // Пользователь сам переключает отправителя кликом по аватарке.
-                // Поэтому никаких автоматических ответов не генерируем.
-                // Просто отправляем сообщение от текущего отправителя.
+            // Основная функция конвертации
+            function convert() {
+                const dsl = dslInput.value;
+                try {
+                    const js = convertDSLtoJS(dsl);
+                    jsOutput.textContent = js;
+                    setStatus('✅ Конвертация успешна!');
+                    return js;
+                } catch (e) {
+                    jsOutput.textContent = '// Ошибка парсинга:\n' + e.message;
+                    setStatus('❌ Ошибка: ' + e.message, true);
+                    return null;
+                }
             }
 
-            // Переключение отправителя (невидимое)
-            function toggleSender() {
-                currentSender = (currentSender === 'user') ? 'bot' : 'user';
-                // Можно добавить вибро или звук, но по условию ничего не показываем.
-                // Для отладки можно вывести в консоль, но не нужно.
-                // console.log('Сейчас отправитель:', currentSender);
-            }
+            // События
+            convertBtn.addEventListener('click', convert);
 
-            // Обработчики
-            sendBtn.addEventListener('click', sendMessage);
-            messageInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter') {
+            // Скачивание
+            downloadBtn.addEventListener('click', function() {
+                const js = jsOutput.textContent;
+                if (!js || js.startsWith('// Ошибка')) {
+                    setStatus('❌ Сначала сконвертируйте код без ошибок', true);
+                    return;
+                }
+                const blob = new Blob([js], { type: 'application/javascript' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'extension.js';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                setStatus('⬇ Файл extension.js скачан');
+            });
+
+            // Копирование
+            copyBtn.addEventListener('click', function() {
+                const js = jsOutput.textContent;
+                if (!js || js.startsWith('// Ошибка')) {
+                    setStatus('❌ Нет кода для копирования', true);
+                    return;
+                }
+                navigator.clipboard.writeText(js).then(() => {
+                    setStatus('📄 Код скопирован в буфер');
+                }).catch(() => {
+                    // fallback
+                    const range = document.createRange();
+                    range.selectNode(jsOutput);
+                    window.getSelection().removeAllRanges();
+                    window.getSelection().addRange(range);
+                    document.execCommand('copy');
+                    setStatus('📄 Код скопирован (fallback)');
+                });
+            });
+
+            // Загрузить пример
+            exampleBtn.addEventListener('click', function() {
+                dslInput.value = exampleCode;
+                convert(); // автоматически конвертировать
+            });
+
+            // Автоконвертация при загрузке
+            window.addEventListener('DOMContentLoaded', function() {
+                convert();
+            });
+
+            // Также можно добавить автообновление по Ctrl+Enter
+            dslInput.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 'Enter') {
                     e.preventDefault();
-                    sendMessage();
+                    convert();
                 }
             });
 
-            // Клик по аватарке переключает отправителя (невидимо)
-            avatar.addEventListener('click', function(e) {
-                e.stopPropagation();
-                toggleSender();
-                // Небольшая тактильная обратная связь без визуальных изменений
-                // Можно мигнуть аватаркой, но это визуально. Оставим только смену.
-            });
-
-            // Очистка чата
-            clearBtn.addEventListener('click', function() {
-                if (isWaitingForBot) return;
-                messagesContainer.innerHTML = `
-                    <div class="welcome"><span>✨ Чат очищен. Напишите что-нибудь</span></div>
-                `;
-                messageInput.disabled = false;
-                sendBtn.disabled = false;
-                isWaitingForBot = false;
-                messageInput.focus();
-            });
-
-            // Стартовые сообщения (чтобы показать диалог)
-            window.addEventListener('load', function() {
-                setTimeout(() => {
-                    addMessage('Привет! Я Чебурчат — твой виртуальный собеседник.', 'bot');
-                }, 300);
-                setTimeout(() => {
-                    addMessage('Здорово! Как настроение?', 'user');
-                }, 900);
-                setTimeout(() => {
-                    addMessage('Отличное! Готов поболтать о чём угодно 😊', 'bot');
-                }, 1600);
-            });
-
-            // Небольшая подсказка в консоли (можно убрать, но оставлю для ясности)
-            console.log('💡 Кликни по аватарке 🐻, чтобы переключить отправителя (Вы / Чебурчат) — функция скрыта.');
+            // Запасной вариант: если не сработал clipboard
         })();
     </script>
 </body>
